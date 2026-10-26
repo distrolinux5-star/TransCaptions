@@ -33,16 +33,14 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Compila whisper.cpp e posiziona il binario con percorso assoluto
+      - name: Compila whisper.cpp e posiziona il binario per il sidecar
         shell: bash
         run: |
           set -e
           echo "Workspace root: $GITHUB_WORKSPACE"
           
-          # 1. Crea la cartella di destinazione nel progetto reale
           mkdir -p "$GITHUB_WORKSPACE/src-tauri/binaries"
           
-          # 2. Clona e compila in /tmp
           git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper-src
           cd /tmp/whisper-src
           
@@ -52,29 +50,16 @@ jobs:
           FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
           echo "Binario trovato: $FOUND_BIN"
           
-          if [ -z "$FOUND_BIN" ]; then
-            echo "ERRORE: whisper-cli non trovato nella build!"
-            exit 1
-          fi
-          
-          # 3. Copia usando il percorso ASSOLUTO (evita di perderlo nella cartella temporanea)
+          # NOTA: Per il sidecar Tauri v2 si aspetta il suffisso del target completo
           DEST_ABSOLUTE="$GITHUB_WORKSPACE/src-tauri/binaries/whisper-cli-${{ matrix.target }}"
           echo "Copia assoluta in: $DEST_ABSOLUTE"
           cp "$FOUND_BIN" "$DEST_ABSOLUTE"
           chmod +x "$DEST_ABSOLUTE"
           
-          # Pulizia temp
           rm -rf /tmp/whisper-src
           
           echo "=== VERIFICA NEL REPO REALE ==="
           ls -la "$GITHUB_WORKSPACE/src-tauri/binaries/"
-          
-          if [ ! -f "$DEST_ABSOLUTE" ]; then
-            echo "ERRORE CRITICO: Il file non è presente nel repository!"
-            exit 1
-          else
-            echo "OK: Il file binario è al suo posto ed è pronto per Tauri."
-          fi
 
       - name: Scarica il modello Whisper (ggml-small.bin)
         run: |
