@@ -33,34 +33,38 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Compila whisper.cpp e posiziona nella cartella binaries
+      - name: Compila whisper.cpp e posiziona con percorso assoluto
         shell: bash
         run: |
           set -e
-          echo "Creazione cartella src-tauri/binaries..."
-          mkdir -p src-tauri/binaries
+          echo "Workspace principale: $GITHUB_WORKSPACE"
           
-          echo "Clonazione whisper.cpp..."
-          git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
-          cd temp-whisper
+          # Crea la cartella binaries con percorso assoluto
+          mkdir -p "$GITHUB_WORKSPACE/src-tauri/binaries"
           
-          echo "Compilazione CMake..."
+          # Clona in una cartella temporanea di sistema (/tmp) per isolare la build
+          git clone https://github.com/ggerganov/whisper.cpp.git /tmp/temp-whisper
+          cd /tmp/temp-whisper
+          
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           
           FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
           echo "Binario trovato: $FOUND_BIN"
           
-          DEST_FILE="../src-tauri/binaries/whisper-cli-${{ matrix.target }}"
-          echo "Copia in destinazione finale: $DEST_FILE"
+          # Destinazione assoluta blindata
+          DEST_FILE="$GITHUB_WORKSPACE/src-tauri/binaries/whisper-cli-${{ matrix.target }}"
+          echo "Copia forzata in: $DEST_FILE"
           cp "$FOUND_BIN" "$DEST_FILE"
           chmod +x "$DEST_FILE"
           
-          cd ..
-          rm -rf temp-whisper
+          echo "=== VERIFICA FINALE CARTELLA BINARIES ==="
+          ls -la "$GITHUB_WORKSPACE/src-tauri/binaries/"
           
-          echo "=== CONTROLLO FINALE CARTELLA BINARIES ==="
-          ls -la src-tauri/binaries/
+          if [ ! -f "$DEST_FILE" ]; then
+            echo "ERRORE: Il file non esiste nella destinazione!"
+            exit 1
+          fi
 
       - name: Scarica il modello Whisper (ggml-small.bin)
         run: |
