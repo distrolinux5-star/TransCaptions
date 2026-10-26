@@ -33,36 +33,41 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Compila whisper.cpp e posiziona con percorso assoluto
+      - name: Compila whisper.cpp e posiziona il binario
         shell: bash
         run: |
           set -e
-          echo "Workspace principale: $GITHUB_WORKSPACE"
-          
-          # Crea la cartella binaries con percorso assoluto
+          echo "=== CREAZIONE CARTELLA BINARIES ==="
           mkdir -p "$GITHUB_WORKSPACE/src-tauri/binaries"
           
-          # Clona in una cartella temporanea di sistema (/tmp) per isolare la build
-          git clone https://github.com/ggerganov/whisper.cpp.git /tmp/temp-whisper
-          cd /tmp/temp-whisper
+          echo "=== CLONAZIONE E COMPILAZIONE WHISPER.CPP ==="
+          git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper-src
+          cd /tmp/whisper-src
           
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           
+          # Trova l'eseguibile ovunque CMake lo abbia messo
           FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
-          echo "Binario trovato: $FOUND_BIN"
+          echo "Eseguibile trovato: $FOUND_BIN"
           
-          # Destinazione assoluta blindata
-          DEST_FILE="$GITHUB_WORKSPACE/src-tauri/binaries/whisper-cli-${{ matrix.target }}"
-          echo "Copia forzata in: $DEST_FILE"
-          cp "$FOUND_BIN" "$DEST_FILE"
-          chmod +x "$DEST_FILE"
+          if [ -z "$FOUND_BIN" ]; then
+            echo "ERRORE CRITICO: whisper-cli non compilato correttamente!"
+            exit 1
+          fi
           
-          echo "=== VERIFICA FINALE CARTELLA BINARIES ==="
+          # Percorso di destinazione esatto richiesto da Tauri v2
+          TARGET_BIN="$GITHUB_WORKSPACE/src-tauri/binaries/whisper-cli-${{ matrix.target }}"
+          
+          echo "Copia in: $TARGET_BIN"
+          cp "$FOUND_BIN" "$TARGET_BIN"
+          chmod +x "$TARGET_BIN"
+          
+          echo "=== VERIFICA PRESENZA FILE ==="
           ls -la "$GITHUB_WORKSPACE/src-tauri/binaries/"
           
-          if [ ! -f "$DEST_FILE" ]; then
-            echo "ERRORE: Il file non esiste nella destinazione!"
+          if [ ! -f "$TARGET_BIN" ]; then
+            echo "ERRORE CRITICO: Il file binario non esiste nella destinazione finale!"
             exit 1
           fi
 
