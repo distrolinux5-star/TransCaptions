@@ -1,4 +1,4 @@
-name: Build Tauri Mac App
+name: Build Tauri Mac App (Dual Architecture)
 
 on:
   push:
@@ -7,8 +7,16 @@ on:
 
 jobs:
   build:
-    name: macOS Build
+    name: Build (${{ matrix.target }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            bin_suffix: aarch64-apple-darwin
+          - target: x86_64-apple-darwin
+            bin_suffix: x86_64-apple-darwin
 
     steps:
       - name: Checkout repository
@@ -19,25 +27,29 @@ jobs:
         with:
           node-version: 20
 
-      - name: Setup Rust stable
+      - name: Setup Rust stable with target
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Scarica e compila whisper-cli per macOS
+      - name: Scarica e compila whisper-cli con CMake per ${{ matrix.target }}
         run: |
           mkdir -p src-tauri/binaries
           git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
           cd temp-whisper
-          make
-          # Copia il binario dalla cartella bin/ generata da whisper.cpp
-          cp bin/whisper-cli ../src-tauri/binaries/whisper-cli-aarch64-apple-darwin
+          cmake -B build
+          cmake --build build --config Release
+          cp build/bin/whisper-cli ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
           cd ..
           rm -rf temp-whisper
-          chmod +x src-tauri/binaries/whisper-cli-aarch64-apple-darwin
+          chmod +x src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
 
-      - name: Build Tauri app for macOS
+      - name: Build Tauri app for ${{ matrix.target }}
         uses: tauri-apps/tauri-action@v0.5.0
+        with:
+          args: --target ${{ matrix.target }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
