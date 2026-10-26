@@ -33,14 +33,19 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Compila whisper.cpp e sovrascrivi i file segnaposto
+      - name: 1. Scarica SUBITO il modello Whisper (ggml-small.bin)
+        run: |
+          mkdir -p src-tauri/models
+          echo "Scaricamento del modello Whisper..."
+          curl -L -o src-tauri/models/ggml-small.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
+          ls -la src-tauri/models/
+
+      - name: 2. Compila whisper.cpp e posiziona il binario
         shell: bash
         run: |
           set -e
-          echo "Verifica presenza cartella binaries..."
           mkdir -p "$GITHUB_WORKSPACE/src-tauri/binaries"
           
-          echo "Clonazione e compilazione whisper.cpp..."
           git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper-src
           cd /tmp/whisper-src
           
@@ -48,24 +53,15 @@ jobs:
           cmake --build build --config Release
           
           FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
-          echo "Binario compilato trovato: $FOUND_BIN"
           
           TARGET_FILE="$GITHUB_WORKSPACE/src-tauri/binaries/whisper-cli-${{ matrix.target }}"
-          echo "Sovrascrittura del file segnaposto in: $TARGET_FILE"
           cp "$FOUND_BIN" "$TARGET_FILE"
           chmod +x "$TARGET_FILE"
           
           rm -rf /tmp/whisper-src
-          
-          echo "=== CONTROLLO FINALE BINARIES ==="
-          ls -la "$GITHUB_WORKSPACE/src-tauri/binaries/"
+          echo "Binario posizionato correttamente in: $TARGET_FILE"
 
-      - name: Scarica il modello Whisper (ggml-small.bin)
-        run: |
-          mkdir -p src-tauri/models
-          curl -L -o src-tauri/models/ggml-small.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
-
-      - name: Build Tauri app for ${{ matrix.target }}
+      - name: 3. Build Tauri app for ${{ matrix.target }}
         uses: tauri-apps/tauri-action@v0.5.0
         with:
           args: --target ${{ matrix.target }}
