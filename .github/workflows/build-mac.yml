@@ -33,16 +33,16 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Compila whisper.cpp e posiziona il binario
+      - name: Compila whisper.cpp e posiziona il binario con percorso assoluto
         shell: bash
         run: |
           set -e
-          echo "Directory corrente: $(pwd)"
+          echo "Workspace root: $GITHUB_WORKSPACE"
           
-          # Crea la cartella binaries
-          mkdir -p src-tauri/binaries
+          # 1. Crea la cartella di destinazione nel progetto reale
+          mkdir -p "$GITHUB_WORKSPACE/src-tauri/binaries"
           
-          echo "Clonazione e compilazione whisper.cpp..."
+          # 2. Clona e compila in /tmp
           git clone https://github.com/ggerganov/whisper.cpp.git /tmp/whisper-src
           cd /tmp/whisper-src
           
@@ -50,30 +50,30 @@ jobs:
           cmake --build build --config Release
           
           FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
-          echo "Eseguibile trovato da CMake: $FOUND_BIN"
+          echo "Binario trovato: $FOUND_BIN"
           
           if [ -z "$FOUND_BIN" ]; then
-            echo "ERRORE: whisper-cli non trovato!"
+            echo "ERRORE: whisper-cli non trovato nella build!"
             exit 1
           fi
           
-          # Percorso di destinazione relativo alla root del repo
-          DEST_PATH="src-tauri/binaries/whisper-cli-${{ matrix.target }}"
-          echo "Copia in: $DEST_PATH"
-          cp "$FOUND_BIN" "$DEST_PATH"
-          chmod +x "$DEST_PATH"
+          # 3. Copia usando il percorso ASSOLUTO (evita di perderlo nella cartella temporanea)
+          DEST_ABSOLUTE="$GITHUB_WORKSPACE/src-tauri/binaries/whisper-cli-${{ matrix.target }}"
+          echo "Copia assoluta in: $DEST_ABSOLUTE"
+          cp "$FOUND_BIN" "$DEST_ABSOLUTE"
+          chmod +x "$DEST_ABSOLUTE"
           
-          cd -
+          # Pulizia temp
           rm -rf /tmp/whisper-src
           
-          echo "=== CONTROLLO FINALE CONTENUTO CARTELLA BINARIES ==="
-          ls -la src-tauri/binaries/
+          echo "=== VERIFICA NEL REPO REALE ==="
+          ls -la "$GITHUB_WORKSPACE/src-tauri/binaries/"
           
-          if [ ! -f "$DEST_PATH" ]; then
-            echo "ERRORE CRITICO: Il file $DEST_PATH non esiste!"
+          if [ ! -f "$DEST_ABSOLUTE" ]; then
+            echo "ERRORE CRITICO: Il file non è presente nel repository!"
             exit 1
           else
-            echo "SUCCESSO: Il file binario esiste ed è pronto."
+            echo "OK: Il file binario è al suo posto ed è pronto per Tauri."
           fi
 
       - name: Scarica il modello Whisper (ggml-small.bin)
