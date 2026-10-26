@@ -14,9 +14,7 @@ jobs:
       matrix:
         include:
           - target: aarch64-apple-darwin
-            bin_suffix: aarch64-apple-darwin
           - target: x86_64-apple-darwin
-            bin_suffix: x86_64-apple-darwin
 
     steps:
       - name: Checkout repository
@@ -35,27 +33,34 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Compila whisper.cpp e posiziona il binario alla radice di src-tauri
+      - name: Compila whisper.cpp e posiziona nella cartella binaries
         shell: bash
         run: |
           set -e
+          echo "Creazione cartella src-tauri/binaries..."
+          mkdir -p src-tauri/binaries
+          
+          echo "Clonazione whisper.cpp..."
           git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
           cd temp-whisper
+          
+          echo "Compilazione CMake..."
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           
           FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
+          echo "Binario trovato: $FOUND_BIN"
           
-          # Posiziona il binario direttamente in src-tauri/ con il suffisso del target
-          DEST_FILE="../src-tauri/whisper-cli-${{ matrix.target }}"
+          DEST_FILE="../src-tauri/binaries/whisper-cli-${{ matrix.target }}"
+          echo "Copia in destinazione finale: $DEST_FILE"
           cp "$FOUND_BIN" "$DEST_FILE"
           chmod +x "$DEST_FILE"
           
           cd ..
           rm -rf temp-whisper
           
-          echo "=== VERIFICA PRESENZA BINARIO ==="
-          ls -la src-tauri/whisper-cli-${{ matrix.target }}
+          echo "=== CONTROLLO FINALE CARTELLA BINARIES ==="
+          ls -la src-tauri/binaries/
 
       - name: Scarica il modello Whisper (ggml-small.bin)
         run: |
