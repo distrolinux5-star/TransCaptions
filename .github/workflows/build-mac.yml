@@ -40,9 +40,14 @@ jobs:
           mkdir -p src-tauri/binaries
           git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
           cd temp-whisper
-          cmake -B build
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          cp build/bin/whisper-cli ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
+          
+          # Trova automaticamente l'eseguibile whisper-cli ovunque si trovi nella cartella di build
+          FOUND_BIN=$(find build -name "whisper-cli" -type f | head -n 1)
+          echo "Trovato binario: $FOUND_BIN"
+          
+          cp "$FOUND_BIN" ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
           cd ..
           rm -rf temp-whisper
           chmod +x src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
