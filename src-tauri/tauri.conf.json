@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "productName": "TransCaptions",
   "version": "0.1.0",
-  "identifier": "com.transcaptions.app",
+  "identifier": "com.transcaptions.desktop",
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",

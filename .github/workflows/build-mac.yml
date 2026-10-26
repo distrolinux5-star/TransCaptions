@@ -36,6 +36,9 @@ jobs:
       - name: Fix permissions for Tauri CLI in node_modules
         run: chmod +x node_modules/.bin/tauri
 
+      - name: Build frontend web assets (Crea la cartella dist)
+        run: npm run build
+
       - name: Scarica il modello Whisper reale (ggml-small.bin)
         run: |
           mkdir -p src-tauri/models
