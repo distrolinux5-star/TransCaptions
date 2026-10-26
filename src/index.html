@@ -1,39 +1,100 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="styles.css" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri App</title>
-    <script type="module" src="/main.js" defer></script>
-  </head>
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Site made with Mobirise Website Builder v6.2.0, https://mobirise.com -->
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="generator" content="Mobirise v6.2.0, mobirise.com">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+  <link rel="shortcut icon" href="assets/images/icon.ico" type="image/x-icon">
+  <meta name="description" content="">
+  
+  <title>TransCaptions</title>
+  <link rel="stylesheet" href="assets/web/assets/mobirise-icons2/mobirise2.css">
+  <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/animatecss/animate.css">
+  <link rel="stylesheet" href="assets/dropdown/css/style.css">
+  <link rel="stylesheet" href="assets/theme/css/style.css">
+  <link rel="preload" href="https://fonts.googleapis.com/css?family=Inter+Tight:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter+Tight:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap"></noscript>
+  <link rel="preload" as="style" href="assets/mobirise/css/mbr-additional.css?v=rGyWSz"><link rel="stylesheet" href="assets/mobirise/css/mbr-additional.css?v=rGyWSz" type="text/css">
+</head>
+<body>
+  
+  <section data-bs-version="5.1" class="menu menu4 cid-vzaiONUmkv" once="menu" id="menu04-1l">
+    <nav class="navbar navbar-dropdown navbar-fixed-top navbar-expand-lg">
+        <div class="container">
+            <div class="navbar-brand">
+                <span class="navbar-logo">
+                    <img src="assets/images/icon.ico" alt="" style="height: 4rem;">
+                </span>
+            </div>
+        </div>
+    </nav>
+</section>
 
-  <body>
-    <main class="container">
-      <h1>Welcome to Tauri</h1>
+<section data-bs-version="5.1" class="start article6 cid-vzak4lO5vM" id="article06-1n">
+    <div class="container">
+        <div class="row justify-content-center">
+            <!-- Zona Drag and Drop -->
+            <div class="card col-md-12 col-lg-12" id="drop-zone" style="cursor: pointer; padding: 40px; border: 2px dashed #ccc;">
+                <div class="card-wrapper">
+                    <div class="card-box align-left">
+                        <h3 class="card-title mbr-fonts-style display-2"><strong>Seleziona il tuo video</strong></h3>
+                        <p class="mbr-text mbr-fonts-style display-7 text-muted mt-3">Trascina qui il file audio o video da trascrivere</p>
+                    </div>
+                </div>
+            </div>
 
-      <div class="row">
-        <a href="https://tauri.app" target="_blank">
-          <img src="/assets/tauri.svg" class="logo tauri" alt="Tauri logo" />
-        </a>
-        <a
-          href="https://developer.mozilla.org/en-US/docs/Web/JavaScript"
-          target="_blank"
-        >
-          <img
-            src="/assets/javascript.svg"
-            class="logo vanilla"
-            alt="JavaScript logo"
-          />
-        </a>
-      </div>
-      <p>Click on the Tauri logo to learn more about the framework</p>
+            <!-- Box per visualizzare la trascrizione -->
+            <div class="col-md-12 col-lg-12 mt-4">
+                <div id="output-box" class="p-3 bg-light rounded" style="display: none; max-height: 300px; overflow-y: auto;">
+                    <h5 class="text-primary">Trascrizione:</h5>
+                    <pre id="transcription-text" style="white-space: pre-wrap; font-family: monospace;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
 
-      <form class="row" id="greet-form">
-        <input id="greet-input" placeholder="Enter a name..." />
-        <button type="submit">Greet</button>
-      </form>
-      <p id="greet-msg"></p>
-    </main>
-  </body>
+<script src="assets/bootstrap/js/bootstrap.bundle.min.js"></script> 
+<script src="assets/smoothscroll/smooth-scroll.js"></script> 
+<script src="assets/ytplayer/index.js"></script> 
+<script src="assets/dropdown/js/navbar-dropdown.js"></script> 
+<script src="assets/theme/js/script.js"></script> 
+
+<input name="animation" type="hidden">
+
+<script>
+  const { invoke } = window.__TAURI__.core;
+
+  const dropZone = document.getElementById('drop-zone') || document.body;
+  const outputBox = document.getElementById('output-box');
+  const transcriptionText = document.getElementById('transcription-text');
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+
+  dropZone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      const filePath = files[0].path;
+      console.log("File caricato:", filePath);
+
+      outputBox.style.display = 'block';
+      transcriptionText.textContent = "Trascrizione in corso con Whisper... Attendere prego.";
+
+      try {
+        const risultato = await invoke('transrivi_audio', { filePath: filePath });
+        transcriptionText.textContent = risultato;
+      } catch (err) {
+        console.error("Errore trascrizione:", err);
+        transcriptionText.textContent = "Errore: " + err;
+      }
+    }
+  });
+</script>
+</body>
 </html>
