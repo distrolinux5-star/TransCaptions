@@ -43,22 +43,18 @@ jobs:
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           
-          echo "=== Ricerca automatica di whisper-cli nella cartella di build ==="
           FOUND_BIN=$(find build -name "whisper-cli" -type f | head -n 1)
           echo "Binario trovato in: $FOUND_BIN"
-          
-          if [ -z "$FOUND_BIN" ]; then
-            echo "Errore: whisper-cli non trovato!"
-            exit 1
-          fi
           
           cp "$FOUND_BIN" ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
           cd ..
           rm -rf temp-whisper
           chmod +x src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
-          
-          echo "=== Verifica file finale in binaries ==="
-          ls -la src-tauri/binaries/
+
+      - name: Scarica il modello Whisper (ggml-small.bin)
+        run: |
+          mkdir -p src-tauri/models
+          curl -L -o src-tauri/models/ggml-small.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin
 
       - name: Build Tauri app for ${{ matrix.target }}
         uses: tauri-apps/tauri-action@v0.5.0
