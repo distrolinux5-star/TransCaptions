@@ -3,7 +3,7 @@ name = "transcaptions"
 version = "0.1.0"
 description = "TransCaptions - Audio/Video Transcription App"
 authors = ["etran"]
-edition = "2026"
+edition = "2021"
 
 # Vedere più chiavi e le loro definizioni su https://doc.rust-lang.org/cargo/reference/manifest.html
 
