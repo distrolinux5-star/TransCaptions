@@ -36,20 +36,28 @@ jobs:
         run: npm install
 
       - name: Compila whisper.cpp e posiziona il binario
+        shell: bash
         run: |
+          set -e
           mkdir -p src-tauri/binaries
           git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
           cd temp-whisper
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           
-          # Copia sicura basata sul percorso standard di whisper.cpp con CMake
+          echo "=== Controllo contenuto build/bin ==="
+          ls -la build/bin || true
+          
           if [ -f "build/bin/whisper-cli" ]; then
             cp build/bin/whisper-cli ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
-          elif [ -f "build/bin/Release/whisper-cli" ]; then
-            cp build/bin/Release/whisper-cli ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
+          elif [ -f "build/bin/main" ]; then
+            cp build/bin/main ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
           else
             FOUND_BIN=$(find build -name "whisper-cli" -o -name "main" -type f | head -n 1)
+            if [ -z "$FOUND_BIN" ]; then
+              echo "ERRORE CRITICO: whisper-cli non trovato nella build di CMake!"
+              exit 1
+            fi
             cp "$FOUND_BIN" ../src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
           fi
           
@@ -57,8 +65,13 @@ jobs:
           rm -rf temp-whisper
           chmod +x src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}
           
-          echo "=== VERIFICA FILE BINARIO ==="
+          echo "=== VERIFICA FINALE NELLA CARTELLA BINARIES ==="
           ls -la src-tauri/binaries/
+          
+          if [ ! -f "src-tauri/binaries/whisper-cli-${{ matrix.bin_suffix }}" ]; then
+            echo "ERRORE: Il file binario non esiste nella cartella di destinazione!"
+            exit 1
+          fi
 
       - name: Scarica il modello Whisper (ggml-small.bin)
         run: |
