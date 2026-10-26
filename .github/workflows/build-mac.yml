@@ -1,9 +1,13 @@
-name: Build Tauri Mac App (Dual Architecture)
+name: Build Tauri Mac App (Dual Architecture & Release)
 
 on:
   push:
     branches: [ "main", "master" ]
   workflow_dispatch:
+
+# Permessi necessari per creare e modificare le Release su GitHub
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -68,9 +72,14 @@ jobs:
           echo "Binario reale posizionato in: $TARGET_FILE"
           ls -lh "$TARGET_FILE"
 
-      - name: Build Tauri app for ${{ matrix.target }}
+      - name: Build Tauri app & upload to GitHub Release
         uses: tauri-apps/tauri-action@v0.5.0
         with:
           args: --target ${{ matrix.target }}
+          tagName: v__VERSION__
+          releaseName: "TransCaptions v__VERSION__"
+          releaseBody: "Release automatica generata da GitHub Actions per macOS (${{ matrix.target }})."
+          releaseDraft: true
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
