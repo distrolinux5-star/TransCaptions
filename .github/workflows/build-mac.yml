@@ -33,7 +33,10 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
-      - name: Sovrascrivi il modello segnaposto con quello reale
+      - name: Fix permissions for Tauri CLI in node_modules
+        run: chmod +x node_modules/.bin/tauri
+
+      - name: Scarica il modello Whisper reale (ggml-small.bin)
         run: |
           mkdir -p src-tauri/models
           echo "Scaricamento modello Whisper reale..."
