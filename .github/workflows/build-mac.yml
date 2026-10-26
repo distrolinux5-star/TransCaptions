@@ -31,11 +31,8 @@ jobs:
           git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
           cd temp-whisper
           make
-          if [ -f "whisper-cli" ]; then
-            cp whisper-cli ../src-tauri/binaries/whisper-cli-aarch64-apple-darwin
-          else
-            cp main ../src-tauri/binaries/whisper-cli-aarch64-apple-darwin
-          fi
+          # Copia il binario dalla cartella bin/ generata da whisper.cpp
+          cp bin/whisper-cli ../src-tauri/binaries/whisper-cli-aarch64-apple-darwin
           cd ..
           rm -rf temp-whisper
           chmod +x src-tauri/binaries/whisper-cli-aarch64-apple-darwin
