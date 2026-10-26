@@ -25,6 +25,21 @@ jobs:
       - name: Install dependencies (npm)
         run: npm install
 
+      - name: Scarica e compila whisper-cli per macOS
+        run: |
+          mkdir -p src-tauri/binaries
+          git clone https://github.com/ggerganov/whisper.cpp.git temp-whisper
+          cd temp-whisper
+          make
+          if [ -f "whisper-cli" ]; then
+            cp whisper-cli ../src-tauri/binaries/whisper-cli-aarch64-apple-darwin
+          else
+            cp main ../src-tauri/binaries/whisper-cli-aarch64-apple-darwin
+          fi
+          cd ..
+          rm -rf temp-whisper
+          chmod +x src-tauri/binaries/whisper-cli-aarch64-apple-darwin
+
       - name: Build Tauri app for macOS
         uses: tauri-apps/tauri-action@v0.5.0
         env:
