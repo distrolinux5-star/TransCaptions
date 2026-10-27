@@ -15,7 +15,6 @@ async fn transrivi_audio(app: tauri::AppHandle, file_path: String) -> Result<Str
         .ok_or("Percorso del modello non valido")?;
 
     // Invocazione del sidecar "whisper-cli" configurato in Tauri v2
-    // Passiamo gli argomenti: modello, file audio/video, flag -ovtt per i sottotitoli e lingua auto
     let output = app.shell()
         .sidecar("whisper-cli")
         .map_err(|e| format!("Errore nell'inizializzazione del sidecar whisper-cli: {}", e))?
@@ -24,7 +23,7 @@ async fn transrivi_audio(app: tauri::AppHandle, file_path: String) -> Result<Str
             model_path_str,
             "-f",
             &file_path,
-            "-ovtt", // <-- Genera automaticamente il file .vtt dei sottotitoli
+            "-ovtt", // Genera automaticamente il file .vtt dei sottotitoli
             "-l",
             "auto"
         ])
@@ -43,8 +42,8 @@ async fn transrivi_audio(app: tauri::AppHandle, file_path: String) -> Result<Str
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_shell::init()) // Inizializza il plugin shell di Tauri v2 per i sidecar
+        .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![transrivi_audio])
-        .run(tauri::generate_context())
+        .run(tauri::generate_context!()) // <-- NOTA IL PUNTO ESCLAMATIVO AGGIUNTO QUI
         .expect("Errore durante l'avvio dell'applicazione Tauri");
 }
