@@ -18,15 +18,31 @@
   <link rel="preload" href="https://fonts.googleapis.com/css?family=Inter+Tight:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter+Tight:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&display=swap"></noscript>
   <link rel="preload" as="style" href="assets/mobirise/css/mbr-additional.css?v=rGyWSz"><link rel="stylesheet" href="assets/mobirise/css/mbr-additional.css?v=rGyWSz" type="text/css">
+  
+  <style>
+    /* Styling minimale per il player video con sottotitoli */
+    ::cue {
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+      font-size: 1rem;
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+  </style>
 </head>
 <body>
   
   <section data-bs-version="5.1" class="menu menu4 cid-vzaiONUmkv" once="menu" id="menu04-1l">
     <nav class="navbar navbar-dropdown navbar-fixed-top navbar-expand-lg">
         <div class="container">
-            <div class="navbar-brand">
-                <span class="navbar-logo">
-                    <img src="assets/images/icon.ico" alt="" style="height: 4rem;">
+            <div class="navbar-brand d-flex align-items-center" style="gap: 10px;">
+                <span class="navbar-logo d-flex align-items-center">
+                    <img src="assets/images/icon.ico" alt="Icon" style="height: 3rem; width: auto;">
+                </span>
+                <!-- Scritta TransCaptions adiacente all'icona con font San Francisco -->
+                <span class="navbar-caption" style="font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif; font-weight: 600; font-size: 1.35rem; letter-spacing: -0.4px; color: #1d1d1f; line-height: 1;">
+                    TransCaptions
                 </span>
             </div>
         </div>
@@ -41,15 +57,28 @@
                 <div class="card-wrapper">
                     <div class="card-box align-left">
                         <h3 class="card-title mbr-fonts-style display-2"><strong>Seleziona il tuo video</strong></h3>
-                        <p class="mbr-text mbr-fonts-style display-7 text-muted mt-3">Trascina qui il file audio o video da trascrivere</p>
+                        <p class="mbr-text mbr-fonts-style display-7 text-muted mt-3">Trascina qui il file audio o video da trascrivere oppure clicca per sceglierlo</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Box per visualizzare la trascrizione -->
+            <!-- Input file nascosto per selezione al click -->
+            <input type="file" id="file-input" style="display: none;" accept="video/*,audio/*">
+
+            <!-- Player Video con Sottotitoli integrati -->
+            <div class="col-md-12 col-lg-12 mt-4" id="video-container" style="display: none;">
+                <h5 class="text-primary mb-2">Anteprima Video con Sottotitoli:</h5>
+                <div class="ratio ratio-16x9 bg-black rounded overflow-hidden shadow-sm">
+                    <video id="video-player" controls preload="metadata">
+                        <track id="caption-track" kind="subtitles" srclang="it" label="Italiano" default>
+                    </video>
+                </div>
+            </div>
+
+            <!-- Box per visualizzare la trascrizione in testo -->
             <div class="col-md-12 col-lg-12 mt-4">
                 <div id="output-box" class="p-3 bg-light rounded" style="display: none; max-height: 300px; overflow-y: auto;">
-                    <h5 class="text-primary">Trascrizione:</h5>
+                    <h5 class="text-primary">Trascrizione Completa:</h5>
                     <pre id="transcription-text" style="white-space: pre-wrap; font-family: monospace;"></pre>
                 </div>
             </div>
@@ -66,35 +95,113 @@
 <input name="animation" type="hidden">
 
 <script>
-  const { invoke } = window.__TAURI__.core;
-
-  const dropZone = document.getElementById('drop-zone') || document.body;
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
   const outputBox = document.getElementById('output-box');
   const transcriptionText = document.getElementById('transcription-text');
+  
+  const videoContainer = document.getElementById('video-container');
+  const videoPlayer = document.getElementById('video-player');
+  const captionTrack = document.getElementById('caption-track');
 
+  // Convertitore di percorsi per il protocollo locale di Tauri v2
+  function getTauriAssetUrl(filePath) {
+    if (window.__TAURI__?.core?.convertFileSrc) {
+      return window.__TAURI__.core.convertFileSrc(filePath);
+    }
+    return filePath;
+  }
+
+  // Funzione per avviare la trascrizione
+  async function processFile(filePath) {
+    if (!filePath) return;
+    
+    console.log("File selezionato:", filePath);
+    
+    // Resetta stati precedenti
+    outputBox.style.display = 'block';
+    videoContainer.style.display = 'none';
+    transcriptionText.textContent = "Trascrizione e generazione sottotitoli in corso con Whisper... Attendere prego.";
+
+    try {
+      const invoke = window.__TAURI__?.core?.invoke || window.__TAURI__?.invoke;
+      if (!invoke) {
+        throw new Error("Tauri API non trovata. Assicurati di eseguire l'app dentro Tauri.");
+      }
+
+      // Invocazione backend Rust (restituisce il testo trascritto)
+      const risultato = await invoke('transrivi_audio', { filePath: filePath });
+      transcriptionText.textContent = risultato;
+
+      // Se il file è un video (mp4, mkv, mov, avi, webm), carica il player video e il file VTT generato da Whisper
+      const ext = filePath.split('.').pop().toLowerCase();
+      const isVideo = ['mp4', 'mov', 'mkv', 'avi', 'webm'].includes(ext);
+
+      if (isVideo) {
+        // Whisper genera il file .vtt nello stesso percorso del video
+        const vttPath = filePath.substring(0, filePath.lastIndexOf('.')) + '.vtt';
+
+        // Imposta sorgente video e sottotitoli usando la conversione sicura di Tauri
+        videoPlayer.src = getTauriAssetUrl(filePath);
+        captionTrack.src = getTauriAssetUrl(vttPath);
+
+        // Mostra il container del video
+        videoContainer.style.display = 'block';
+        videoPlayer.load();
+      }
+
+    } catch (err) {
+      console.error("Errore trascrizione:", err);
+      transcriptionText.textContent = "Errore durante la trascrizione: " + (err.message || err);
+    }
+  }
+
+  // 1. Apertura selettore file al click sul box
+  dropZone.addEventListener('click', () => {
+    fileInput.click();
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      const file = e.target.files[0];
+      const filePath = file.path || file.name;
+      processFile(filePath);
+    }
+  });
+
+  // 2. Drag & Drop standard browser
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.borderColor = '#007bff';
+  });
+
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.borderColor = '#ccc';
   });
 
   dropZone.addEventListener('drop', async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    dropZone.style.borderColor = '#ccc';
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       const filePath = files[0].path;
-      console.log("File caricato:", filePath);
-
-      outputBox.style.display = 'block';
-      transcriptionText.textContent = "Trascrizione in corso con Whisper... Attendere prego.";
-
-      try {
-        const risultato = await invoke('transrivi_audio', { filePath: filePath });
-        transcriptionText.textContent = risultato;
-      } catch (err) {
-        console.error("Errore trascrizione:", err);
-        transcriptionText.textContent = "Errore: " + err;
-      }
+      processFile(filePath);
     }
   });
+
+  // 3. Ascoltatore nativo Drag & Drop di Tauri v2 (garantisce il recupero del percorso su macOS)
+  if (window.__TAURI__ && window.__TAURI__.event) {
+    window.__TAURI__.event.listen('tauri://drag-drop', (event) => {
+      if (event.payload && event.payload.paths && event.payload.paths.length > 0) {
+        processFile(event.payload.paths[0]);
+      }
+    });
+  }
 </script>
 </body>
 </html>
